@@ -425,7 +425,7 @@ class ICal
 		$temp = explode(";", $key);
 
 		if (empty($temp[1])) { // not TZID in key
-			$value = $this->ical_date_to_unix($value);
+			$value = ($value === '' ? '' : $this->ical_date_to_unix($value));
 			return array($key, $value);
 		}
 
@@ -434,9 +434,32 @@ class ICal
 		$key = $temp[0];
 		$temp = explode("=", $temp[1]);
 		$return_value[$temp[0]] = trim($temp[1], '"');	// RFC 5545 allows quoted parameter values (TZID="Europe/Berlin")
-		$return_value['unixtime'] = $this->ical_date_to_unix($value);	// Local time as GMT timestamp; TZ correction is done by caller (AGENDA_EXT_BUGGEDFILEx)
+		$return_value['unixtime'] = ($value === '' ? '' : $this->ical_date_to_unix($value));	// Local time as GMT timestamp; TZ correction is done by caller (AGENDA_EXT_BUGGEDFILEx)
 
 		return array($key, $return_value);
+	}
+
+	/**
+	 * Check whether a parsed calendar component has a usable start date.
+	 *
+	 * @param	array<string,mixed>	$event	Parsed calendar component
+	 * @return	bool
+	 */
+	public function has_start_date($event)
+	{
+		if (isset($event['DTSTART;VALUE=DATE'])) {
+			return $event['DTSTART;VALUE=DATE'] !== '';
+		}
+
+		if (!array_key_exists('DTSTART', $event)) {
+			return false;
+		}
+
+		if (is_array($event['DTSTART'])) {
+			return isset($event['DTSTART']['unixtime']) && $event['DTSTART']['unixtime'] !== '';
+		}
+
+		return $event['DTSTART'] !== '' && $event['DTSTART'] !== null;
 	}
 
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps

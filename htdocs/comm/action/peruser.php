@@ -1187,13 +1187,18 @@ if (count($listofextcals)) {
 			// Duplicate all repeatable events into new entries
 			$moreicalevents = array();
 			foreach ($icalevents as $icalevent) {
+				if (!$ical->has_start_date($icalevent)) {
+					dol_syslog("Skip external calendar component without a valid DTSTART", LOG_WARNING);
+					continue;
+				}
+
 				if (isset($icalevent['RRULE']) && is_array($icalevent['RRULE'])) { //repeatable event
 					//if ($event->date_start_in_calendar < $firstdaytoshow) $event->date_start_in_calendar=$firstdaytoshow;
 					//if ($event->date_end_in_calendar > $lastdaytoshow) $event->date_end_in_calendar=($lastdaytoshow-1);
-					if ($icalevent['DTSTART;VALUE=DATE']) { //fullday event
+					if (isset($icalevent['DTSTART;VALUE=DATE'])) { //fullday event
 						$datecurstart = dol_stringtotime($icalevent['DTSTART;VALUE=DATE'], 1);
 						$datecurend = dol_stringtotime($icalevent['DTEND;VALUE=DATE'], 1) - 1; // We remove one second to get last second of day
-					} elseif (is_array($icalevent['DTSTART']) && !empty($icalevent['DTSTART']['unixtime'])) {
+					} elseif (is_array($icalevent['DTSTART']) && isset($icalevent['DTSTART']['unixtime']) && $icalevent['DTSTART']['unixtime'] !== '') {
 						$datecurstart = $icalevent['DTSTART']['unixtime']; // can't be empty
 						$datecurend = $icalevent['DTEND']['unixtime'];
 						if (!empty($ical->cal['DAYLIGHT']['DTSTART']) /* && $datecurstart */) {
@@ -1239,7 +1244,7 @@ if (count($listofextcals)) {
 						if ($datecurend >= $firstdaytoshow) {    // We add event
 							$newevent = $icalevent;
 							unset($newevent['RRULE']);
-							if ($icalevent['DTSTART;VALUE=DATE']) {
+							if (isset($icalevent['DTSTART;VALUE=DATE'])) {
 								$newevent['DTSTART;VALUE=DATE'] = dol_print_date($datecurstart, '%Y%m%d');
 								$newevent['DTEND;VALUE=DATE'] = dol_print_date($datecurend + 1, '%Y%m%d');
 							} else {
@@ -1291,6 +1296,10 @@ if (count($listofextcals)) {
 				$addevent = false;
 				$datestart = null;
 				$dateend = null;
+				if (!$ical->has_start_date($icalevent)) {
+					continue;
+				}
+
 				if (isset($icalevent['DTSTART;VALUE=DATE'])) { // fullday event
 					// For full day events, date are also GMT but they won't but converted using tz during output
 					$datestart = dol_stringtotime($icalevent['DTSTART;VALUE=DATE'], 1);
